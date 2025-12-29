@@ -1,0 +1,48 @@
+# --- General / OS ---
+.DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# --- Editor / IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Go (Golang) ---
+# コンパイルされたバイナリファイル（実行ファイル）
+# main.go をビルドするとできるファイルなどを除外
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+# プロジェクト固有のバイナリ名
+server
+main
+
+# --- Docker ---
+docker-compose.override.yml
+
+# --- Terraform (ここが最重要！！) ---
+# プラグインなどのダウンロードフォルダ
+.terraform/
+# ローカルのステートファイル（中身はパスワードの塊なので絶対コミット禁止！）
+*.tfstate
+*.tfstate.*
+# 変数定義ファイル（パスワードなどを書くことがあるので除外）
+*.tfvars
+*.tfvars.json
+# クラッシュログ
+crash.log
+override.tf
+override.tf.json
+.terraformrc
+terraform.rc
+
+# --- Secrets / Env ---
+.env
+.env.*
