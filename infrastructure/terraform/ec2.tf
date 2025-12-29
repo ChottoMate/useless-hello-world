@@ -8,17 +8,19 @@ data "aws_ami" "al2023" {
 }
 
 resource "aws_key_pair" "auth" {
+    count = 0
   key_name   = "useless-key"
   public_key = file("~/useless-key.pub")
 }
 
 resource "aws_instance" "web" {
+    count = 0
   ami           = data.aws_ami.al2023.id
   instance_type = "t2.micro"
 
   subnet_id                   = aws_subnet.public_1a.id
   vpc_security_group_ids      = [aws_security_group.web.id]
-  key_name                    = aws_key_pair.auth.key_name
+  key_name                    = aws_key_pair.auth[0].key_name
   associate_public_ip_address = true
 
   user_data = <<-EOF
