@@ -327,3 +327,84 @@ resource "aws_ecs_service" "world" {
     registry_arn = aws_service_discovery_service.world.arn
   }
 }
+
+# Grafana IAM Role
+resource "aws_iam_role" "grafana_task_role" {
+  name = "useless-grafana-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "grafana_cloudwatch" {
+  role       = aws_iam_role.grafana_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "grafana_xray" {
+  role       = aws_iam_role.grafana_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXrayReadOnlyAccess"
+}
+
+# Grafana Task Definition
+resource "aws_ecs_task_definition" "grafana" {
+  family                   = "useless-grafana"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "512"
+  memory                   = "1024"
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.grafana_task_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name  = "grafana"
+      image = "grafana/grafana:latest"
+      portMappings = [
+        {
+          containerPort = 3000
+          hostPort      = 3000
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/grafana"
+          "awslogs-region"        = "ap-northeast-1"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
+    }
+  ])
+}
+
+# Grafana Log Group
+resource "aws_cloudwatch_log_group" "grafana" {
+  name              = "/ecs/grafana"
+  retention_in_days = 7
+}
+
+# Grafana Service
+resource "aws_ecs_service" "grafana" {
+  name            = "grafana"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.grafana.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = [aws_subnet.public_1a.id]
+    security_groups  = [aws_security_group.web.id]
+    assign_public_ip = true
+  }
+}
