@@ -111,6 +111,28 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role" "ecs_task_role" {
+  name = "useless-ecs-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
 # Task Definitions
 resource "aws_ecs_task_definition" "gateway" {
   family                   = "useless-gateway"
@@ -119,6 +141,7 @@ resource "aws_ecs_task_definition" "gateway" {
   cpu                      = "256"
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
@@ -148,6 +171,18 @@ resource "aws_ecs_task_definition" "gateway" {
           "awslogs-stream-prefix" = "ecs"
         }
       }
+    },
+    {
+      name  = "xray-daemon"
+      image = "amazon/aws-xray-daemon"
+      cpu   = 32
+      memoryReservation = 256
+      portMappings = [
+        {
+          containerPort = 2000
+          protocol      = "udp"
+        }
+      ]
     }
   ])
 }
@@ -159,6 +194,7 @@ resource "aws_ecs_task_definition" "hello" {
   cpu                      = "256"
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
@@ -178,6 +214,18 @@ resource "aws_ecs_task_definition" "hello" {
           "awslogs-stream-prefix" = "ecs"
         }
       }
+    },
+    {
+      name  = "xray-daemon"
+      image = "amazon/aws-xray-daemon"
+      cpu   = 32
+      memoryReservation = 256
+      portMappings = [
+        {
+          containerPort = 2000
+          protocol      = "udp"
+        }
+      ]
     }
   ])
 }
@@ -189,6 +237,7 @@ resource "aws_ecs_task_definition" "world" {
   cpu                      = "256"
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
@@ -208,6 +257,18 @@ resource "aws_ecs_task_definition" "world" {
           "awslogs-stream-prefix" = "ecs"
         }
       }
+    },
+    {
+      name  = "xray-daemon"
+      image = "amazon/aws-xray-daemon"
+      cpu   = 32
+      memoryReservation = 256
+      portMappings = [
+        {
+          containerPort = 2000
+          protocol      = "udp"
+        }
+      ]
     }
   ])
 }

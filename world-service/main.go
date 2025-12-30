@@ -5,13 +5,19 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/aws/aws-xray-sdk-go/xray"
 )
 
 func main() {
-	http.HandleFunc("/world", func(w http.ResponseWriter, r *http.Request) {
+	xray.Configure(xray.Config{
+		LogLevel: "info",
+	})
+
+	http.Handle("/world", xray.Handler(xray.NewFixedSegmentNamer("world-service"), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Received request: /world")
 		fmt.Fprintf(w, "World")
-	})
+	})))
 
 	port := os.Getenv("PORT")
 	if port == "" {
