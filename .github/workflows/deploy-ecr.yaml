@@ -64,3 +64,9 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster useless-cluster --service gateway --force-new-deployment
+          aws ecs update-service --cluster useless-cluster --service hello --force-new-deployment
+          aws ecs update-service --cluster useless-cluster --service world --force-new-deployment
