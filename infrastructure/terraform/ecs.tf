@@ -1,7 +1,7 @@
 # ECS Cluster
 resource "aws_ecs_cluster" "main" {
   name = "useless-cluster"
-  
+
   setting {
     name  = "containerInsights"
     value = "enabled"
@@ -173,9 +173,9 @@ resource "aws_ecs_task_definition" "gateway" {
       }
     },
     {
-      name  = "xray-daemon"
-      image = "amazon/aws-xray-daemon"
-      cpu   = 32
+      name              = "xray-daemon"
+      image             = "amazon/aws-xray-daemon"
+      cpu               = 32
       memoryReservation = 256
       portMappings = [
         {
@@ -216,9 +216,9 @@ resource "aws_ecs_task_definition" "hello" {
       }
     },
     {
-      name  = "xray-daemon"
-      image = "amazon/aws-xray-daemon"
-      cpu   = 32
+      name              = "xray-daemon"
+      image             = "amazon/aws-xray-daemon"
+      cpu               = 32
       memoryReservation = 256
       portMappings = [
         {
@@ -259,9 +259,9 @@ resource "aws_ecs_task_definition" "world" {
       }
     },
     {
-      name  = "xray-daemon"
-      image = "amazon/aws-xray-daemon"
-      cpu   = 32
+      name              = "xray-daemon"
+      image             = "amazon/aws-xray-daemon"
+      cpu               = 32
       memoryReservation = 256
       portMappings = [
         {
