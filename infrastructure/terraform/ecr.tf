@@ -2,7 +2,8 @@ resource "aws_ecr_repository" "repos" {
   for_each = toset([
     "gateway-service",
     "hello-service",
-    "world-service"
+    "world-service",
+    "grafana"
   ])
 
   name                 = "useless-hello-world/${each.key}"

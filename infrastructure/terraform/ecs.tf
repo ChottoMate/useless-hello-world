@@ -278,7 +278,7 @@ resource "aws_ecs_service" "gateway" {
   name            = "gateway"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.gateway.arn
-  desired_count   = 1
+  desired_count   = 0
   launch_type     = "FARGATE"
 
   network_configuration {
@@ -296,7 +296,7 @@ resource "aws_ecs_service" "hello" {
   name            = "hello"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.hello.arn
-  desired_count   = 1
+  desired_count   = 0
   launch_type     = "FARGATE"
 
   network_configuration {
@@ -314,7 +314,7 @@ resource "aws_ecs_service" "world" {
   name            = "world"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.world.arn
-  desired_count   = 1
+  desired_count   = 0
   launch_type     = "FARGATE"
 
   network_configuration {
@@ -369,7 +369,7 @@ resource "aws_ecs_task_definition" "grafana" {
   container_definitions = jsonencode([
     {
       name  = "grafana"
-      image = "grafana/grafana:latest"
+      image = "${aws_ecr_repository.repos["grafana"].repository_url}:latest"
       portMappings = [
         {
           containerPort = 3000
@@ -399,7 +399,7 @@ resource "aws_ecs_service" "grafana" {
   name            = "grafana"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.grafana.arn
-  desired_count   = 1
+  desired_count   = 0
   launch_type     = "FARGATE"
 
   network_configuration {

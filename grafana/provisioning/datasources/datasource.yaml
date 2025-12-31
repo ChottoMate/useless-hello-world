@@ -1,0 +1,19 @@
+apiVersion: 1
+
+datasources:
+  - name: AWS X-Ray
+    type: grafana-x-ray-datasource
+    uid: xray
+    access: proxy
+    isDefault: false
+    jsonData:
+      region: ap-northeast-1
+
+  - name: CloudWatch
+    type: cloudwatch
+    uid: cloudwatch
+    access: proxy
+    isDefault: true
+    jsonData:
+      defaultRegion: ap-northeast-1
+      tracingDatasourceUid: xray
