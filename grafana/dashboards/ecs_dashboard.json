@@ -18,8 +18,8 @@
     "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
+    "id": 1,
     "links": [],
-    "liveNow": false,
     "panels": [
         {
             "datasource": {
@@ -32,11 +32,13 @@
                         "mode": "palette-classic"
                     },
                     "custom": {
+                        "axisBorderShow": false,
                         "axisCenteredZero": false,
                         "axisColorMode": "text",
                         "axisLabel": "",
                         "axisPlacement": "auto",
                         "barAlignment": 0,
+                        "barWidthFactor": 0.6,
                         "drawStyle": "line",
                         "fillOpacity": 0,
                         "gradientMode": "none",
@@ -45,6 +47,7 @@
                             "tooltip": false,
                             "viz": false
                         },
+                        "insertNulls": false,
                         "lineInterpolation": "linear",
                         "lineWidth": 1,
                         "pointSize": 5,
@@ -52,6 +55,7 @@
                             "type": "linear"
                         },
                         "showPoints": "auto",
+                        "showValues": false,
                         "spanNulls": false,
                         "stacking": {
                             "group": "A",
@@ -67,7 +71,7 @@
                         "steps": [
                             {
                                 "color": "green",
-                                "value": null
+                                "value": 0
                             },
                             {
                                 "color": "red",
@@ -93,10 +97,12 @@
                     "showLegend": true
                 },
                 "tooltip": {
+                    "hideZeros": false,
                     "mode": "single",
                     "sort": "none"
                 }
             },
+            "pluginVersion": "12.3.1",
             "targets": [
                 {
                     "datasource": {
@@ -108,13 +114,14 @@
                         "ServiceName": "gateway"
                     },
                     "expression": "",
-                    "id": "queryA",
+                    "id": "",
+                    "label": "",
                     "matchExact": true,
                     "metricEditorMode": 0,
                     "metricName": "CPUUtilization",
                     "metricQueryType": 0,
                     "namespace": "AWS/ECS",
-                    "period": 300,
+                    "period": "",
                     "queryMode": "Metrics",
                     "refId": "A",
                     "region": "ap-northeast-1",
@@ -126,8 +133,9 @@
             "type": "timeseries"
         }
     ],
+    "preload": false,
     "refresh": "",
-    "schemaVersion": 39,
+    "schemaVersion": 42,
     "tags": [],
     "templating": {
         "list": []
@@ -140,6 +148,5 @@
     "timezone": "",
     "title": "ECS Dashboard",
     "uid": "ecs-dashboard",
-    "version": 1,
-    "weekStart": ""
+    "version": 1
 }
