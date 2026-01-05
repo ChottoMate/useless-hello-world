@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/aws/aws-xray-sdk-go/xray"
 )
@@ -18,7 +19,11 @@ func main() {
 	http.Handle("/", xray.Handler(xray.NewFixedSegmentNamer("gateway-service"), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Gateway received a request")
 
-		client := xray.Client(nil)
+		// Configure HttpClient with timeout
+		httpClient := &http.Client{
+			Timeout: 5 * time.Second,
+		}
+		client := xray.Client(httpClient)
 
 		helloURL := os.Getenv("HELLO_URL")
 		if helloURL == "" {
@@ -32,7 +37,7 @@ func main() {
 		}
 		req = req.WithContext(r.Context())
 
-		helloResp, err := client.Do(req)
+		helloResp, err := doWithRetry(client, req)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error calling Hello: %v", err), 500)
 			return
@@ -52,7 +57,7 @@ func main() {
 		}
 		req = req.WithContext(r.Context())
 
-		worldResp, err := client.Do(req)
+		worldResp, err := doWithRetry(client, req)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error calling World: %v", err), 500)
 			return
@@ -73,4 +78,40 @@ func main() {
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func doWithRetry(client *http.Client, req *http.Request) (*http.Response, error) {
+	var resp *http.Response
+	var err error
+
+	for i := 0; i < 3; i++ {
+		if i > 0 {
+			// Use select to allow context cancellation during backoff
+			select {
+			case <-req.Context().Done():
+				return nil, req.Context().Err()
+			case <-time.After(200 * time.Millisecond):
+				log.Printf("Retrying request to %s (attempt %d)", req.URL, i+1)
+			}
+		}
+		
+		// Create a new request based on the original one if needed?
+		// But for GET requests without body, reuse is mostly fine.
+		// However, context cancellation should be respected. 
+		// req is already bound to ctx from r.Context() in main.
+		
+		resp, err = client.Do(req)
+		
+		// If success and status is OK (less than 500)
+		if err == nil && resp.StatusCode < 500 {
+			return resp, nil
+		}
+
+		// If we got a response but it was 5xx, ensure we close body before retrying
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}
+	// Return the last error or response (which might be 5xx)
+	return resp, err
 }
