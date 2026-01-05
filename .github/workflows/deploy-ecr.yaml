@@ -1,32 +1,93 @@
-name: Build & Push to ECR
+name: Build & Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deploy all services'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  build-and-push:
-    name: Build & Push
+  # 1. Check which services changed
+  check-changes:
     runs-on: ubuntu-latest
-    
+    outputs:
+      gateway: ${{ steps.filter.outputs.gateway }}
+      hello: ${{ steps.filter.outputs.hello }}
+      world: ${{ steps.filter.outputs.world }}
+      grafana: ${{ steps.filter.outputs.grafana }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            gateway:
+              - 'gateway-service/**'
+            hello:
+              - 'hello-service/**'
+            world:
+              - 'world-service/**'
+            grafana:
+              - 'grafana/**'
 
+  # 2. Quality Check (Lint & Test) - Runs on all PRs or if Go code changed
+  quality-check:
+    needs: check-changes
+    # Run if any service changed OR strictly forced
+    if: ${{ needs.check-changes.outputs.gateway == 'true' || needs.check-changes.outputs.hello == 'true' || needs.check-changes.outputs.world == 'true' || inputs.force_deploy == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Vet & Test Gateway
+        if: needs.check-changes.outputs.gateway == 'true' || inputs.force_deploy == true
+        run: |
+          cd gateway-service
+          go vet ./...
+          go test -v ./...
+
+      - name: Vet & Test Hello
+        if: needs.check-changes.outputs.hello == 'true' || inputs.force_deploy == true
+        run: |
+          cd hello-service
+          go vet ./...
+          go test -v ./...
+
+      - name: Vet & Test World
+        if: needs.check-changes.outputs.world == 'true' || inputs.force_deploy == true
+        run: |
+          cd world-service
+          go vet ./...
+          go test -v ./...
+
+  # 3. Build & Deploy Jobs (Parallel)
+  
+  deploy-gateway:
+    needs: [check-changes, quality-check]
+    if: ${{ needs.check-changes.outputs.gateway == 'true' || inputs.force_deploy == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-northeast-1
-
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build & Push Gateway
+      - name: Build & Push
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: useless-hello-world/gateway-service
@@ -36,8 +97,25 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster useless-cluster --service gateway --force-new-deployment
 
-      - name: Build & Push Hello
+  deploy-hello:
+    needs: [check-changes, quality-check]
+    if: ${{ needs.check-changes.outputs.hello == 'true' || inputs.force_deploy == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build & Push
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: useless-hello-world/hello-service
@@ -47,8 +125,25 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster useless-cluster --service hello --force-new-deployment
 
-      - name: Build & Push World
+  deploy-world:
+    needs: [check-changes, quality-check]
+    if: ${{ needs.check-changes.outputs.world == 'true' || inputs.force_deploy == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build & Push
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: useless-hello-world/world-service
@@ -58,8 +153,25 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster useless-cluster --service world --force-new-deployment
 
-      - name: Build & Push Grafana
+  deploy-grafana:
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.grafana == 'true' || inputs.force_deploy == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build & Push
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: useless-hello-world/grafana
@@ -69,10 +181,6 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
       - name: Deploy to ECS
         run: |
-          aws ecs update-service --cluster useless-cluster --service gateway --force-new-deployment
-          aws ecs update-service --cluster useless-cluster --service hello --force-new-deployment
-          aws ecs update-service --cluster useless-cluster --service world --force-new-deployment
           aws ecs update-service --cluster useless-cluster --service grafana --force-new-deployment
